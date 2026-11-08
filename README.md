@@ -144,4 +144,4 @@ Issues and pull requests are welcome.
 
 ## Note on AI
 
-Parts of this code were generated with the help of AI.
+Parts of this code and README were generated with AI.
