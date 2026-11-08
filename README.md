@@ -122,12 +122,7 @@ Either way, open http://127.0.0.1:5000 in your browser when the terminal says th
 | `GET /api/tracker-data`            | Current SOL price                                       |
 | `GET /api/solana-token?address=`   | Price, symbol, name and source for a Solana token       |
 
-## Troubleshooting
-
-- **A token won't load:** very new tokens can take a minute or two to appear on DexScreener. Check the terminal, where each failed source prints a `[TOKEN]` line with the reason.
-- **Price looks wrong:** compare it with the token's page on DexScreener. Thinly traded tokens can move quickly.
-- **Fonts look different:** the page loads Manrope and JetBrains Mono from Google Fonts, so it needs an internet connection to match the screenshots.
-
+**An internet connection is required at all times to ensure accurate price updates.**
 ## Roadmap
 
 - Pull live priority fees from Solana's `getRecentPrioritizationFees` RPC method
