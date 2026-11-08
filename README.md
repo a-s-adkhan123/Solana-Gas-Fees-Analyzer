@@ -4,7 +4,7 @@
 
 A small web app that estimates what a Solana token swap will cost in network fees. Paste any Solana token address, load its live price, and simulate a swap between SOL and that token.
 
-<!-- Add a screenshot of the app here, for example: ![Screenshot](screenshot.png) -->
+
 
 ## Features
 
