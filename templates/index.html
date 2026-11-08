@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEX Aggregator Gas Fee Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f1523;
+            --surface: #172033;
+            --raised: #1e2a42;
+            --line: #2b3a58;
+            --text: #e9eef8;
+            --muted: #94a1ba;
+            --teal: #3dd9b4;
+            --violet: #8f7bff;
+            --red: #ff7b8a;
+            --sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+            --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+        }
+        * { box-sizing: border-box; }
+        html { color-scheme: dark; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(900px 500px at 85% -10%, rgba(143, 123, 255, 0.16), transparent 60%),
+                radial-gradient(800px 500px at 0% 0%, rgba(61, 217, 180, 0.10), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            line-height: 1.5;
+            padding: 32px 20px 40px;
+        }
+        .wrap { max-width: 1080px; margin: 0 auto; }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+        h1 { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+        .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+        .network {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 7px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+        .dot.live { background: var(--teal); box-shadow: 0 0 0 4px rgba(61, 217, 180, 0.18); }
+
+        /* Layout */
+        .grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: start; }
+        .stack { display: flex; flex-direction: column; gap: 20px; }
+        @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        h2 { margin: 0 0 16px; font-size: 1.05rem; font-weight: 700; }
+        .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+        /* Swap card */
+        .box {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .box-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .box-row { display: flex; align-items: center; gap: 12px; }
+        .amount {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: 0;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            font-weight: 700;
+            padding: 4px 0;
+            outline: none;
+        }
+        .amount::-webkit-outer-spin-button, .amount::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+        .amount { -moz-appearance: textfield; appearance: textfield; }
+        .output { font-family: var(--mono); font-size: 1.6rem; font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 4px 0; }
+        select {
+            background: var(--raised);
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .receive { border-color: transparent; background:
+            linear-gradient(var(--bg), var(--bg)) padding-box,
+            linear-gradient(120deg, var(--teal), var(--violet)) border-box;
+            border: 1px solid transparent;
+        }
+        .flip-wrap { display: flex; justify-content: center; margin: -10px 0; position: relative; z-index: 1; }
+        .flip {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: var(--raised);
+            color: var(--text);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+        .flip:hover { background: var(--line); }
+
+        .seg { display: inline-flex; background: var(--raised); border-radius: 8px; padding: 2px; }
+        .seg button {
+            background: transparent; border: 0; color: var(--muted);
+            padding: 4px 12px; border-radius: 6px; font-family: var(--sans);
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        }
+        .seg button[aria-pressed="true"] { background: var(--line); color: var(--text); }
+
+        .summary { margin: 20px 0 0; padding: 0; list-style: none; }
+        .summary li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+        .summary li:last-child { border-bottom: 0; }
+        .summary span:first-child { color: var(--muted); }
+        .summary span:last-child { font-weight: 600; text-align: right; }
+        .num { font-family: var(--mono); }
+        .fee-sub { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 500; }
+
+        /* Speed options */
+        .speed-title { margin: 24px 0 10px; font-size: 0.95rem; font-weight: 700; }
+        .speeds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        @media (max-width: 520px) { .speeds { grid-template-columns: 1fr; } }
+        .speed input { position: absolute; opacity: 0; pointer-events: none; }
+        .speed label {
+            display: block; height: 100%;
+            background: var(--bg); border: 1px solid var(--line);
+            border-radius: 12px; padding: 12px 14px; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .speed label:hover { border-color: var(--muted); }
+        .speed input:checked + label { border-color: var(--violet); background: rgba(143, 123, 255, 0.10); }
+        .speed input:focus-visible + label { outline: 2px solid var(--violet); outline-offset: 2px; }
+        .speed .name { display: block; font-weight: 700; font-size: 0.95rem; }
+        .speed .desc { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+        .speed .rate { display: block; font-family: var(--mono); font-size: 0.8rem; margin-top: 8px; }
+
+        /* Prices */
+        .price-row { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line); gap: 12px; }
+        .price-row:last-child { border-bottom: 0; padding-bottom: 0; }
+        .price-row:first-of-type { padding-top: 0; }
+        .price-name { color: var(--muted); font-size: 0.9rem; }
+        .price-val { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; }
+
+        /* Lookup */
+        .lookup { display: flex; gap: 10px; }
+        .lookup input {
+            flex: 1; min-width: 0;
+            background: var(--bg); border: 1px solid var(--line); color: var(--text);
+            border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 0.85rem;
+        }
+        .lookup input:focus { outline: 2px solid var(--violet); outline-offset: 0; border-color: transparent; }
+        .btn {
+            background: var(--violet); color: #12102a; border: 0; border-radius: 10px;
+            padding: 12px 18px; font-family: var(--sans); font-weight: 700; font-size: 0.9rem; cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:disabled { opacity: 0.6; cursor: wait; }
+        .btn:focus-visible, .flip:focus-visible, .seg button:focus-visible, select:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+        #lookup-status { margin: 12px 0 0; font-size: 0.85rem; color: var(--muted); }
+        #lookup-status.ok { color: var(--teal); }
+        #lookup-status.err { color: var(--red); }
+
+        footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <header>
+        <div>
+            <h1>DEX Aggregator Gas Fee Simulator</h1>
+            <p class="subtitle">Estimate what a Solana token swap will cost in network fees.</p>
+        </div>
+        <div class="network"><span id="live-dot" class="dot"></span>Solana network</div>
+    </header>
+
+    <div class="grid">
+
+        <!-- Swap simulator -->
+        <section class="card" aria-labelledby="swap-title">
+            <h2 id="swap-title">Swap simulator</h2>
+
+            <div class="box">
+                <div class="box-top">
+                    <span>You pay</span>
+                    <div class="seg" role="group" aria-label="Enter amount in">
+                        <button type="button" id="unit-tokens" aria-pressed="true">Tokens</button>
+                        <button type="button" id="unit-usd" aria-pressed="false">USD</button>
+                    </div>
+                </div>
+                <div class="box-row">
+                    <input id="swap-input-value" class="amount" type="number" min="0" step="any" value="10" aria-label="Amount to pay">
+                    <select id="swap-from" aria-label="Asset you pay with">
+                        <option value="SOL">SOL</option>
+                        <option value="CUSTOM">Your token</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flip-wrap">
+                <button type="button" class="flip" id="flip-btn" aria-label="Swap the two assets">&#8645;</button>
+            </div>
+
+            <div class="box receive">
+                <div class="box-top"><span>You receive (estimate)</span></div>
+                <div class="box-row">
+                    <div id="calc-tokens-out" class="output" aria-live="polite">0</div>
+                    <select id="swap-to" aria-label="Asset you receive">
+                        <option value="CUSTOM">Your token</option>
+                        <option value="SOL">SOL</option>
+                    </select>
+                </div>
+            </div>
+
+            <ul class="summary">
+                <li><span>Trade value</span><span id="calc-usd-value" class="num">$0.00</span></li>
+                <li><span>Network fee</span><span><span id="calc-gas-cost" class="num">$0.0000</span><span id="calc-gas-sol" class="fee-sub num"></span></span></li>
+                <li><span>Routed through</span><span>Jupiter Aggregator</span></li>
+            </ul>
+
+            <h3 class="speed-title">Transaction speed</h3>
+            <div class="speeds" role="radiogroup" aria-label="Transaction speed">
+                <div class="speed">
+                    <input type="radio" name="speed" id="speed-eco" value="1500">
+                    <label for="speed-eco">
+                        <span class="name">Economy</span>
+                        <span class="desc">Cheapest, may be slower</span>
+                        <span class="rate">1,500 µlamports</span>
+                    </label>
+                </div>
+                <div class="speed">
+                    <input type="radio" name="speed" id="speed-market" value="5200" checked>
+                    <label for="speed-market">
+                        <span class="name">Standard</span>
+                        <span class="desc">Good for most swaps</span>
+                        <span class="rate">5,200 µlamports</span>
+                    </label>
+                </div>
+                <div class="speed">
+                    <input type="radio" name="speed" id="speed-instant" value="92000">
+                    <label for="speed-instant">
+                        <span class="name">Fast</span>
+                        <span class="desc">Highest priority</span>
+                        <span class="rate">92,000 µlamports</span>
+                    </label>
+                </div>
+            </div>
+            <p class="hint" style="margin-top:12px;">Fee = 5,000 lamports base + priority fee for 200,000 compute units. The priority rates above are fixed estimates.</p>
+        </section>
+
+        <!-- Right column -->
+        <div class="stack">
+
+            <section class="card" aria-labelledby="prices-title">
+                <h2 id="prices-title">Prices</h2>
+                <div class="price-row">
+                    <span class="price-name">SOL</span>
+                    <span id="price-sol" class="price-val">Loading...</span>
+                </div>
+                <div class="price-row">
+                    <span id="custom-label" class="price-name">Your token</span>
+                    <span id="price-custom" class="price-val">Not loaded</span>
+                </div>
+            </section>
+
+            <section class="card" aria-labelledby="lookup-title">
+                <h2 id="lookup-title">Look up a token</h2>
+                <div class="lookup">
+                    <input id="token-ca-input" type="text" placeholder="Paste a Solana token address" autocomplete="off" spellcheck="false" aria-label="Solana token address">
+                    <button type="button" class="btn" id="lookup-btn">Look up</button>
+                </div>
+                <p id="lookup-status">Paste a contract address to load its price into the simulator.</p>
+            </section>
+
+        </div>
+    </div>
+
+    <footer>Prices come from Binance, DexScreener and Jupiter. Fee figures are estimates, not a quote.</footer>
+</div>
+
+<script>
+    const COMPUTE_UNITS = 200000;
+    const BASE_FEE_LAMPORTS = 5000;
+
+    let prices = { SOL: 185, CUSTOM: null };
+    let tokenSymbol = "Your token";
+    let unit = "tokens";
+
+    const $ = (id) => document.getElementById(id);
+
+    function formatPrice(p) {
+        if (p >= 1) return "$" + p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const decimals = Math.min(10, Math.max(2, 3 - Math.floor(Math.log10(p))));
+        return "$" + p.toFixed(decimals);
+    }
+
+    function assetName(key) { return key === "SOL" ? "SOL" : tokenSymbol; }
+
+    function refreshAssetLabels() {
+        document.querySelectorAll('#swap-from option[value="CUSTOM"], #swap-to option[value="CUSTOM"]')
+            .forEach((o) => { o.textContent = tokenSymbol; });
+    }
+
+    function selectedPriorityRate() {
+        return parseInt(document.querySelector('input[name="speed"]:checked').value, 10);
+    }
+
+    function calculateSwap() {
+        const from = $("swap-from").value;
+        const to = $("swap-to").value;
+        const amount = parseFloat($("swap-input-value").value) || 0;
+
+        // Fee is independent of the token prices, so always show it
+        const priorityLamports = (COMPUTE_UNITS * selectedPriorityRate()) / 1e6;
+        const feeSol = (BASE_FEE_LAMPORTS + priorityLamports) / 1e9;
+        const feeUsd = feeSol * prices.SOL;
+        $("calc-gas-cost").textContent = "$" + feeUsd.toFixed(4);
+        $("calc-gas-sol").textContent = feeSol.toFixed(8) + " SOL";
+
+        const needsToken = from === "CUSTOM" || to === "CUSTOM";
+        if (needsToken && !prices.CUSTOM) {
+            $("calc-usd-value").textContent = "--";
+            $("calc-tokens-out").textContent = "Look up a token first";
+            return;
+        }
+
+        const usd = unit === "usd" ? amount : amount * prices[from];
+        const out = from === to ? (unit === "usd" ? usd / prices[to] : amount) : usd / prices[to];
+
+        $("calc-usd-value").textContent = "$" + usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        $("calc-tokens-out").textContent = out.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    }
+
+    // Keep the two dropdowns on different assets
+    function onAssetChange(changedId) {
+        const from = $("swap-from"), to = $("swap-to");
+        if (from.value === to.value) {
+            const other = changedId === "swap-from" ? to : from;
+            other.value = other.value === "SOL" ? "CUSTOM" : "SOL";
+        }
+        calculateSwap();
+    }
+
+    function setUnit(next) {
+        unit = next;
+        $("unit-tokens").setAttribute("aria-pressed", String(next === "tokens"));
+        $("unit-usd").setAttribute("aria-pressed", String(next === "usd"));
+        calculateSwap();
+    }
+
+    async function updateDashboard() {
+        try {
+            const response = await fetch("/api/tracker-data");
+            const data = await response.json();
+            if (data.status === "success" && data.prices.SOL) {
+                prices.SOL = data.prices.SOL;
+                $("price-sol").textContent = formatPrice(prices.SOL);
+                $("live-dot").classList.add("live");
+                calculateSwap();
+            }
+        } catch (error) {
+            $("live-dot").classList.remove("live");
+            console.error("Could not load SOL price:", error);
+        }
+    }
+
+    async function fetchToken() {
+        const address = $("token-ca-input").value.trim();
+        const status = $("lookup-status");
+        const btn = $("lookup-btn");
+
+        if (!address) {
+            status.textContent = "Enter a token address first.";
+            status.className = "err";
+            return;
+        }
+
+        btn.disabled = true;
+        status.textContent = "Looking up token...";
+        status.className = "";
+
+        try {
+            const response = await fetch("/api/solana-token?address=" + encodeURIComponent(address));
+            const data = await response.json();
+
+            if (data.status === "success") {
+                prices.CUSTOM = data.price;
+                tokenSymbol = (data.symbol || address.substring(0, 5)).toUpperCase();
+                $("custom-label").textContent = data.name ? tokenSymbol + " (" + data.name + ")" : tokenSymbol;
+                $("price-custom").textContent = formatPrice(data.price);
+                refreshAssetLabels();
+                status.textContent = "Loaded " + tokenSymbol + (data.source ? " from " + data.source : "") + ".";
+                status.className = "ok";
+                calculateSwap();
+            } else {
+                status.textContent = "No price found for that address. Check it and try again.";
+                status.className = "err";
+            }
+        } catch (err) {
+            status.textContent = "Could not reach the server. Make sure app.py is running.";
+            status.className = "err";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    $("swap-input-value").addEventListener("input", calculateSwap);
+    $("swap-from").addEventListener("change", () => onAssetChange("swap-from"));
+    $("swap-to").addEventListener("change", () => onAssetChange("swap-to"));
+    $("unit-tokens").addEventListener("click", () => setUnit("tokens"));
+    $("unit-usd").addEventListener("click", () => setUnit("usd"));
+    $("flip-btn").addEventListener("click", () => {
+        const from = $("swap-from"), to = $("swap-to");
+        const tmp = from.value; from.value = to.value; to.value = tmp;
+        calculateSwap();
+    });
+    document.querySelectorAll('input[name="speed"]').forEach((r) => r.addEventListener("change", calculateSwap));
+    $("lookup-btn").addEventListener("click", fetchToken);
+    $("token-ca-input").addEventListener("keydown", (e) => { if (e.key === "Enter") fetchToken(); });
+
+    refreshAssetLabels();
+    calculateSwap();
+    updateDashboard();
+    setInterval(updateDashboard, 10000);
+</script>
+</body>
+</html>
